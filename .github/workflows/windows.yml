@@ -167,3 +167,12 @@ jobs:
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_distribution_id: ${{ secrets.AWS_DISTRIBUTION_ID }}
           upload_aws: ${{ matrix.arch == 'win64_msvc2022_arm64_cross_compiled' && 'false' || 'true' }}
+          
+      - name: Upload artifact (Debug build folder)
+        if: matrix.build_type == 'Debug'
+        uses: actions/upload-artifact@v4
+        with:
+          name: QGroundControl-${{ matrix.arch }}-Debug
+          path: |
+            ${{ runner.temp }}\build\Debug\**
+          retention-days: 7
