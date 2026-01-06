@@ -166,6 +166,42 @@ jobs:
             --qmldir "${{ github.workspace }}\src" `
             "$portable\QGroundControl.exe"
 
+          # ---- Copy GStreamer runtime DLLs into portable folder ----
+          # GitHub Windows runner 上通常安装在 C:\gstreamer\1.0\msvc_x86_64\bin
+          $gstCandidates = @(
+            "C:\gstreamer\1.0\msvc_x86_64\bin",
+            "C:\gstreamer\1.0\msvc_x86_64\bin\"
+          )
+      
+          $gstBin = $gstCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+      
+          if (-not $gstBin) {
+            Write-Host "GStreamer bin not found in common locations. Searching for gstbase-1.0-0.dll..."
+            $hit = Get-ChildItem -Path C:\ -Filter "gstbase-1.0-0.dll" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($hit) { $gstBin = $hit.Directory.FullName }
+          }
+      
+          if (-not $gstBin) { throw "GStreamer DLLs not found on runner." }
+      
+          Write-Host "Using GStreamer bin: $gstBin"
+      
+          # 复制 gst*.dll（你报错的 gstgl/gstvideo/gstrtsp/gstbase 都在这里）
+          Copy-Item (Join-Path $gstBin "gst*.dll") $portable -Force
+      
+          # 再补一些常见依赖（有些机器会缺）
+          $extra = @(
+            "libglib-2.0-0.dll",
+            "libgobject-2.0-0.dll",
+            "libgio-2.0-0.dll",
+            "libgmodule-2.0-0.dll",
+            "libgstreamer-1.0-0.dll"
+          )
+          foreach ($f in $extra) {
+            $p = Join-Path $gstBin $f
+            if (Test-Path $p) { Copy-Item $p $portable -Force }
+          }
+
+
       - name: Upload artifact (portable Debug x64)
         if: matrix.build_type == 'Debug' && matrix.arch == 'win64_msvc2022_64'
         uses: actions/upload-artifact@v4
