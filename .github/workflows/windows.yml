@@ -150,7 +150,30 @@ jobs:
       - name: Create Installer
         working-directory: ${{ runner.temp }}\build
         run: cmake --install . --config ${{ matrix.build_type }}
+        
+      - name: Create portable Debug package (windeployqt)
+        if: matrix.build_type == 'Debug' && matrix.arch == 'win64_msvc2022_64'
+        shell: pwsh
+        run: |
+          $portable = Join-Path $env:RUNNER_TEMP "qgc-portable-debug"
+          New-Item -ItemType Directory -Force -Path $portable | Out-Null
 
+          Copy-Item "$env:RUNNER_TEMP\build\Debug\QGroundControl.exe" $portable
+
+          # 把 Qt Debug DLL / plugins / qml 依赖拷贝到同目录
+          & "$env:QT_ROOT_DIR\bin\windeployqt.exe" `
+            --debug `
+            --qmldir "${{ github.workspace }}\src" `
+            "$portable\QGroundControl.exe"
+
+      - name: Upload artifact (portable Debug x64)
+        if: matrix.build_type == 'Debug' && matrix.arch == 'win64_msvc2022_64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: QGroundControl-win64-portable-Debug
+          path: ${{ runner.temp }}\qgc-portable-debug\**
+          retention-days: 7
+          
       - name: Attest Build Provenance
         if: matrix.build_type == 'Release' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: actions/attest-build-provenance@v3
