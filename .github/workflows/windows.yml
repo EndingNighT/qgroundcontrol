@@ -181,12 +181,15 @@ jobs:
             if ($hit) { $gstBin = $hit.Directory.FullName }
           }
       
-          if (-not $gstBin) { throw "GStreamer DLLs not found on runner." }
+          if (-not $gstBin) {
+            Write-Warning "GStreamer DLLs not found on runner. Portable will be produced but video/RTSP may not work."
+            return
+          }
       
           Write-Host "Using GStreamer bin: $gstBin"
-      
-          # 复制 gst*.dll（你报错的 gstgl/gstvideo/gstrtsp/gstbase 都在这里）
-          Copy-Item (Join-Path $gstBin "gst*.dll") $portable -Force
+          
+          # 方案 B：复制 bin 目录下所有 DLL（包含 glib-2.0-0.dll、gobject-2.0-0.dll 等）
+          Copy-Item (Join-Path $gstBin "*.dll") $portable -Force
       
           # 再补一些常见依赖（有些机器会缺）
           $extra = @(
