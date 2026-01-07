@@ -204,6 +204,29 @@ jobs:
             if (Test-Path $p) { Copy-Item $p $portable -Force }
           }
 
+          # ---- Ensure QtQuick3D QML module is present (fix qquick3dplugin not found) ----
+          $qtQml = Join-Path $env:QT_ROOT_DIR "qml"
+          $dstQml = Join-Path $portable "qml"
+          
+          $qtQuick3DDirs = @(
+            "QtQuick3D",
+            "QtQuick3D/Helpers",
+            "QtQuick3D/Effects",
+            "QtQuick3D/ParticleEffects",
+            "QtQuick3D/AssetUtils"
+          )
+          
+          foreach ($d in $qtQuick3DDirs) {
+            $src = Join-Path $qtQml $d
+            if (Test-Path $src) {
+              $dst = Join-Path $dstQml $d
+              New-Item -ItemType Directory -Force -Path $dst | Out-Null
+              Copy-Item $src $dst -Recurse -Force
+            } else {
+              Write-Warning "Qt QML module missing in Qt install: $src"
+            }
+          }
+
 
       - name: Upload artifact (portable Debug x64)
         if: matrix.build_type == 'Debug' && matrix.arch == 'win64_msvc2022_64'
